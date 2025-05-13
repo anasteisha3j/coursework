@@ -1,0 +1,38 @@
+<!-- templates/blocked_ips.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>🚫 Заблоковані IP-адреси</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>IP-адреса</th>
+            <th>Дія</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ip in ips %}
+        <tr>
+            <td>{{ ip.ip_address }}</td>
+            <td>
+                <a href="{{ url_for('views.unblock_ip', ip=ip.ip_address) }}" onclick="return confirm('Розблокувати {{ ip.ip_address }}?');">
+                    🔓 Розблокувати
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+
+        {% for ip in ips %}
+        <tr>
+            <td>{{ ip.ip_address }}</td>
+            <td>
+                <a href="{{ url_for('views.unblock_ip', ip=ip.ip_address) }}">🔓 Розблокувати</a>
+            </td>
+        </tr>
+        {% endfor %}
+
+    </tbody>
+</table>
+
+{% endblock %}

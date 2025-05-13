@@ -1,0 +1,271 @@
+body {
+    font-family: 'Press Start 2P', 'Fira Code', monospace; 
+    background-color: #0a0a0a;
+    color: #00d78f; 
+    padding: 20px;
+    line-height: 1.6;
+    font-size: 24px; 
+}
+
+h1 {
+    color: #0288cb; 
+    text-align: center;
+    text-shadow: 0 0 5px rgba(0, 170, 255, 0.5), 0 0 10px rgba(0, 170, 255, 0.7), 0 0 20px rgba(0, 170, 255, 1);
+    border-bottom: 2px dashed #00ffaa; 
+    padding-bottom: 10px;
+    font-family: 'Press Start 2P', 'Fira Code', monospace; 
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-size: 32px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: #111;
+    border: 1px solid #00aaff;
+    box-shadow: 0 0 15px rgba(0, 170, 255, 0.3);
+}
+
+th, td {
+    padding: 15px;
+    border: 1px solid #003366;
+    text-align: left;
+    font-family: 'Press Start 2P', 'Fira Code', monospace;
+}
+
+th {
+    background-color: #001a33;
+    color: #00aaff;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 18px;
+}
+
+.low {
+    background-color: #002211;
+    color: #00ffaa;
+    border-left: 5px solid #00ffaa;
+    font-family: 'Press Start 2P', 'Fira Code', monospace;
+    font-size: 14px;
+}
+
+.medium {
+    background-color: #1a1a00;
+    color: #ffff00;
+    border-left: 5px solid #ffff00;
+    font-family: 'Press Start 2P', 'Fira Code', monospace;
+    font-size: 14px;
+}
+
+.high {
+    background-color: #330000;
+    color: #ff5555;
+    border-left: 5px solid #ff5555;
+    font-family: 'Press Start 2P', 'Fira Code', monospace;
+    font-size: 14px;
+}
+
+tr:hover {
+    background-color: #002233 !important;
+    cursor: pointer;
+}
+
+a, button {
+    color: #00d78f; 
+    text-decoration: none;
+    font-family: 'Press Start 2P', 'Fira Code', monospace;
+    font-size: 18px;
+    background-color: #111;
+    border: 2px solid #00d78f;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+a:hover, button:hover {
+    background-color: #00d78f;
+    color: #111;
+    box-shadow: 0 0 10px rgba(0, 170, 255, 0.7);
+}
+
+a:active, button:active {
+    color: #9b4f96; 
+    background-color: #111;
+    border: 2px solid #9b4f96;
+    box-shadow: none;
+}
+
+body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('https://www.transparenttextures.com/patterns/scanlines.png') repeat;
+    opacity: 0.1;
+    pointer-events: none;
+}
+
+#loading {
+    font-size: 20px;
+    color: #ffcc00;
+    text-align: center;
+    padding: 20px;}     
+
+
+
+
+
+
+/* static/style.css */
+nav {
+    margin-bottom: 20px;
+}
+
+.main-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.secondary-nav {
+    margin-top: 5px;
+    padding-top: 5px;
+}
+
+@media (max-width: 768px) {
+    .main-nav {
+        gap: 10px;
+    }
+    
+    .main-nav a {
+        white-space: nowrap;
+        padding: 5px 8px;
+    }
+}
+
+.flashes {
+    list-style-type: none;
+    padding: 0;
+}
+
+.flashes li {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+}
+
+.flashes .success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.flashes .error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+
+
+
+
+/*  */
+/* Attack severity styling */
+.alert-critical {
+    background-color: #721c24;
+    color: white;
+    border-left: 5px solid #ff0000;
+    animation: pulse 2s infinite;
+}
+
+.alert-high {
+    background-color: #dc3545;
+    color: white;
+}
+
+.alert-medium {
+    background-color: #fff3cd;
+}
+
+.alert-low {
+    background-color: #d4edda;
+}
+
+/* Pinned attacks */
+.pinned-attack {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Pulsing animation for critical alerts */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Blocked IP badge */
+.badge-blocked {
+    background-color: #dc3545;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 0.8em;
+}
+
+
+
+/* Admin controls */
+.admin-controls {
+    margin: 15px 0;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.btn-danger {
+    background: #dc3545;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-block {
+    background: #ffc107;
+    border: none;
+    padding: 3px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+/* Log details styling */
+.log-details {
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Table improvements */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+th, td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+/* th {
+    background-color: #f2f2f2;
+} */

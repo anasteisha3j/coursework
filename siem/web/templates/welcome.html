@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Ласкаво просимо</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>👋 Вітаємо у SIEM системі</h1>
+    <p>Для початку роботи увійдіть або зареєструйте організацію.</p>
+
+    <a href="{{ url_for('views.login') }}"><button>🔐 Увійти</button></a>
+    <a href="{{ url_for('views.register_organization') }}"><button>📝 Зареєструватися</button></a>
+</body>
+</html>

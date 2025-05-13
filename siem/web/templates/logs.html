@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>SIEM Logs</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Логи системи</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Час</th>
+                <th>Пристрій</th>
+                <th>Тип події</th>
+                <th>Рівень</th>
+                <th>Деталі</th>
+            </tr>
+        </thead>
+        <tbody id="logs-body">
+            <!-- Дані підвантажуються через JS -->
+        </tbody>
+    </table>
+
+    <script>
+        fetch('/logs')
+            .then(res => res.json())
+            .then(data => {
+                const body = document.getElementById('logs-body');
+                data.forEach(log => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${new Date(log.created_at).toLocaleString()}</td>
+                        <td>${log.device_name}</td>
+                        <td>${log.event_type}</td>
+                        <td class="${log.severity}">${log.severity}</td>
+                        <td><pre>${JSON.stringify(log.details, null, 2)}</pre></td>
+                    `;
+                    body.appendChild(row);
+                });
+            });
+    </script>
+</body>
+</html>

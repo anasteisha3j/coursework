@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Додати пристрій</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Додати новий пристрій</h1>
+
+    <form method="POST" action="{{ url_for('views.add_device') }}">
+        <label for="name">Назва пристрою:</label>
+        <input type="text" id="name" name="name" required>
+
+        <label for="ip_address">IP адреса:</label>
+        <input type="text" id="ip_address" name="ip_address" required>
+
+        <button type="submit">Додати</button>
+    </form>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flashes">
+          {% for category, message in messages %}
+            <li class="{{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <a href="{{ url_for('views.devices') }}">⬅ Назад до списку пристроїв</a>
+</body>
+</html>

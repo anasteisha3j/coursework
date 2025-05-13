@@ -1,0 +1,248 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIEM Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .critical {
+            background-color: #721c24;
+            color: white;
+            border-left: 5px solid #ff0000;
+            animation: pulse 2s infinite;
+        }
+
+        .high {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .medium {
+            background-color: #fff3cd;
+        }
+
+        .low {
+            background-color: #d4edda;
+        }
+
+        /* Pinned attacks */
+        .pinned-attack {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-weight: bold;
+        }
+
+        /* Pulsing animation for critical alerts */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        /* Blocked IP badge */
+        .badge-blocked {
+            background-color: #dc3545;
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+
+        /* Loading indicator */
+        #loading {
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>👁️ Журнал подій | {{ current_user.email }}</h1>
+        <p>Організація: {{ current_user.organization.name }}</p>
+
+        <nav>
+            <a href="{{ url_for('views.devices') }}">📦 Пристрої</a>
+            {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('views.add_user') }}">➕ Додати користувача</a>
+                <a href="{{ url_for('views.users') }}">👥 Користувачі</a>
+            {% endif %}
+            <a href="{{ url_for('views.logout') }}">🚪 Вийти</a>
+        </nav>
+    </header>
+
+    <main>
+        <div id="loading" style="display: none;">Завантаження...</div>
+        
+        {% if current_user.role == 'admin' %}
+            <div class="admin-controls">
+                <a href="{{ url_for('views.blocked_ips') }}" class="blocked-ips-link">🚫 Заблоковані IP</a>
+                <button id="auto-block-btn" class="btn-danger">🛡️ Автоблокування</button>
+            </div>
+        {% endif %}
+
+
+        <!-- Add this to your admin controls section -->
+        <button id="generate-report-btn" class="btn-report">📝 Згенерувати звіт</button>
+
+        <!-- Add this modal at the bottom of your body -->
+        <div id="report-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Звіт про безпеку</h2>
+                <pre id="report-content"></pre>
+                <button id="send-to-telegram">📤 Надіслати в Telegram</button>
+            </div>
+        </div>
+        <!-- Pinned Attacks Section -->
+        <div id="pinned-attacks">
+            <h2>🔒 Важливі події</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Пристрій</th>
+                        <th>Тип події</th>
+                        <th>Рівень</th>
+                        <th>Деталі</th>
+                        <th>Час</th>
+                    </tr>
+                </thead>
+                <tbody id="pinned-logs">
+                    <!-- Pinned logs will appear here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- All Logs Section -->
+        <div id="all-logs">
+            <h2>📜 Всі події</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Пристрій</th>
+                        <th>Тип події</th>
+                        <th>Рівень</th>
+                        <th>Деталі</th>
+                        <th>Час</th>
+                        <th>Дії</th>
+                    </tr>
+                </thead>
+                <tbody id="logs-body">
+                    <!-- All logs will appear here -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        // Global variable to store blocked IPs
+        let blockedIPs = new Set();
+
+        async function fetchBlockedIPs() {
+            try {
+                const response = await fetch('/blocked_ips');
+                const data = await response.json();
+                blockedIPs = new Set(data.map(ip => ip.ip_address));
+            } catch (error) {
+                console.error('Помилка отримання заблокованих IP:', error);
+            }
+        }
+
+        async function fetchLogs() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+    
+            try {
+                // Fetch both logs and blocked IPs
+                await fetchBlockedIPs();
+                const response = await fetch('/logs');
+                const logs = await response.json();
+                
+                const pinnedTbody = document.getElementById('pinned-logs');
+                const regularTbody = document.getElementById('logs-body');
+                
+                pinnedTbody.innerHTML = '';
+                regularTbody.innerHTML = '';
+    
+                logs.forEach(log => {
+                    const isAttack = log.event_type.includes('Attack') || 
+                                    ['critical', 'high'].includes(log.severity?.toLowerCase());
+                    const isBlocked = log.details?.source_ip && blockedIPs.has(log.details.source_ip);
+                    
+                    const tr = document.createElement('tr');
+                    tr.className = log.severity ? log.severity.toLowerCase() : '';
+                    if (isAttack) tr.classList.add('attack-row');
+                    if (isBlocked) tr.classList.add('blocked-row');
+                    
+                    const details = log.details ? JSON.stringify(log.details) : 'Немає деталей';
+                    const attackActions = isAttack ? `
+                        <td>
+                            ${!isBlocked ? `<button onclick="blockIP('${log.details?.source_ip}')" class="btn-block">🚫 Блокувати IP</button>` : ''}
+                        </td>
+                    ` : '<td></td>';
+                    
+                    tr.innerHTML = `
+                        <td>${log.device_name || 'Невідомий пристрій'}</td>
+                        <td>${log.event_type}</td>
+                        <td>
+                            ${log.severity || 'info'}
+                            ${isBlocked ? '<span class="badge-blocked">БЛОК</span>' : ''}
+                        </td>
+                        <td class="log-details">${details}</td>
+                        <td>${new Date(log.created_at).toLocaleString()}</td>
+                        ${attackActions}
+                    `;
+                    
+                    // Add to pinned if critical/high severity
+                    if (['critical', 'high'].includes(log.severity?.toLowerCase())) {
+                        tr.classList.add('pinned-attack');
+                        pinnedTbody.appendChild(tr.cloneNode(true));
+                    }
+                    
+                    regularTbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('Не вдалося завантажити логи:', error);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function blockIP(ipAddress) {
+            if (!ipAddress) return;
+            
+            try {
+                const response = await fetch(`/block_ip/${ipAddress}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    alert(`IP ${ipAddress} успішно заблоковано`);
+                    fetchLogs(); // Refresh logs
+                } else {
+                    alert('Помилка при блокуванні IP');
+                }
+            } catch (error) {
+                console.error('Помилка блокування IP:', error);
+            }
+        }
+
+        // Initialize and refresh every 5 seconds
+        fetchLogs();
+        setInterval(fetchLogs, 5000);
+        
+    </script>
+</body>
+</html>
+

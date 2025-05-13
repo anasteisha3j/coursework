@@ -1,0 +1,63 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Користувачі організації</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .delete-button {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .delete-button:hover {
+            background-color: darkred;
+        }
+        .user-actions {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Користувачі</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Роль</th>
+                <th>Дата створення</th>
+                <th>Дії</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.email }}</td>
+                <td>{{ user.role }}</td>
+                <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td class="user-actions">
+                    {% if user.id != current_user.id %}
+                        <a href="{{ url_for('views.delete_user', user_id=user.id) }}" class="delete-button">🗑 Видалити</a>
+                    {% else %}
+                        🔒 (ви)
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <br>
+    <a href="{{ url_for('views.dashboard') }}">На головну</a>
+
+</body>
+</html>

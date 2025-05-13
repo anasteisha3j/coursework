@@ -1,0 +1,188 @@
+# import datetime
+# import uuid
+# from . import db
+# from flask_login import UserMixin
+# from datetime import datetime
+
+# class Organization(db.Model):
+#     __tablename__ = 'organizations'
+#     id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+#     name = db.Column(db.String, unique=True, nullable=False)
+#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+#     users = db.relationship('User', backref='organization', lazy=True)
+#     devices = db.relationship('Device', backref='organization', lazy=True)
+
+# class User(db.Model, UserMixin):
+#     __tablename__ = 'users'
+#     id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+#     email = db.Column(db.String, unique=True, nullable=False)
+#     password_hash = db.Column(db.String)
+#     role = db.Column(db.String, nullable=False)  # 'admin' or 'user'
+#     organization_id = db.Column(db.String, db.ForeignKey('organizations.id'), nullable=False)
+#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+#     def __repr__(self):
+#         return f'<User {self.email}>'
+
+#     def is_admin(self):
+#         return self.role == 'admin'
+
+# class Device(db.Model):
+#     __tablename__ = 'devices'
+#     id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+#     organization_id = db.Column(db.String, db.ForeignKey('organizations.id'), nullable=False)
+#     name = db.Column(db.String, nullable=False)
+#     ip_address = db.Column(db.String)
+#     type = db.Column(db.String)  
+#     model = db.Column(db.String) 
+#     last_seen = db.Column(db.DateTime)
+    
+#     is_active = db.Column(db.Boolean, default=True)
+
+#     logs = db.relationship('Log', backref='device', lazy=True)
+
+# class Log(db.Model):
+#     __tablename__ = 'logs'
+#     id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+#     device_id = db.Column(db.String, db.ForeignKey('devices.id'))
+#     organization_id = db.Column(db.String, db.ForeignKey('organizations.id'))
+#     event_type = db.Column(db.String, nullable=False)
+#     severity = db.Column(db.String)  
+#     details = db.Column(db.JSON) 
+#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+#     __table_args__ = (
+#     db.Index('idx_device_event', 'device_id', 'event_type', 'created_at'),
+#     db.Index('idx_org_event', 'organization_id', 'created_at')  # додав індекс для організації
+# )
+
+
+
+
+# #
+# class BlockedIP(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     ip_address = db.Column(db.String(100), unique=True, nullable=False)
+#     blocked_at = db.Column(db.DateTime, default=db.func.now())
+
+
+
+
+
+import uuid
+from datetime import datetime
+from flask_login import UserMixin
+from . import db
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+
+
+class Organization(db.Model):
+    __tablename__ = 'organizations'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    users = db.relationship('User', back_populates='organization', cascade='all, delete-orphan')
+    devices = db.relationship('Device', back_populates='organization', cascade='all, delete-orphan')
+    logs = db.relationship('Log', back_populates='organization')
+
+    def __repr__(self):
+        return f'<Organization {self.name}>'
+
+class User(db.Model, UserMixin):
+    __tablename__ = 'users'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='user')  # 'admin', 'user', 'auditor'
+    organization_id = db.Column(db.String(36), db.ForeignKey('organizations.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login = db.Column(db.DateTime)
+
+    # Relationships
+    organization = db.relationship('Organization', back_populates='users')
+
+    def is_admin(self):
+        return self.role == 'admin'
+
+    def __repr__(self):
+        return f'<User {self.email} ({self.role})>'
+
+class Device(db.Model):
+    __tablename__ = 'devices'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    organization_id = db.Column(db.String(36), db.ForeignKey('organizations.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    ip_address = db.Column(db.String(15), nullable=False)
+    mac_address = db.Column(db.String(17))
+    type = db.Column(db.String(50))  # 'server', 'workstation', 'camera', etc.
+    last_seen = db.Column(db.DateTime)
+    is_active = db.Column(db.Boolean, default=True)
+
+    # Relationships
+    organization = db.relationship('Organization', back_populates='devices')
+    logs = db.relationship('Log', back_populates='device', cascade='all, delete-orphan')
+
+    def status(self):
+        return 'online' if self.is_active else 'offline'
+
+    def __repr__(self):
+        return f'<Device {self.name} ({self.ip_address})>'
+
+class Log(db.Model):
+    __tablename__ = 'logs'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    device_id = db.Column(db.String(36), db.ForeignKey('devices.id'))
+    organization_id = db.Column(db.String(36), db.ForeignKey('organizations.id'), nullable=False)
+    event_type = db.Column(db.String(50), nullable=False)  # 'auth', 'network', 'system'
+    severity = db.Column(db.String(10))  # 'info', 'warning', 'error', 'critical'
+    def get_alert_class(self):
+        return {
+            'critical': 'alert-critical',
+            'high': 'alert-high',
+            'medium': 'alert-medium',
+            'low': 'alert-low'
+        }.get(self.severity, '')
+    #message = db.Column(db.Text)
+    details = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    # Relationships
+    device = db.relationship('Device', back_populates='logs')
+    organization = db.relationship('Organization', back_populates='logs')
+
+    __table_args__ = (
+        db.Index('idx_log_device_created', 'device_id', 'created_at'),
+        db.Index('idx_log_org_created', 'organization_id', 'created_at'),
+        db.Index('idx_log_severity', 'severity'),
+    )
+
+    def __repr__(self):
+        return f'<Log {self.event_type}@{self.created_at}>'
+
+class BlockedIP(db.Model):
+    __tablename__ = 'blocked_ips'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    ip_address = db.Column(db.String(15), unique=True, nullable=False)
+    reason = db.Column(db.String(200))
+    blocked_by = db.Column(db.String(36), db.ForeignKey('users.id'))
+    blocked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime)
+
+    # Relationship
+    blocker = db.relationship('User')
+
+    def is_active(self):
+        return self.expires_at is None or self.expires_at > datetime.utcnow()
+
+    def __repr__(self):
+        return f'<BlockedIP {self.ip_address}>'

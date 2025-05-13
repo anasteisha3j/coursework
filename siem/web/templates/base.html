@@ -1,0 +1,40 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIEM Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>SIEM Dashboard</h1>
+        <nav>
+            <div class="main-nav">
+                <a href="{{ url_for('views.dashboard') }}">🏠 Головна</a>
+                <a href="{{ url_for('views.devices') }}">📦 Пристрої</a>
+                {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                    <a href="{{ url_for('views.add_user') }}">➕ Додати користувача</a>
+                    <a href="{{ url_for('views.users') }}">👥 Користувачі</a>
+                {% endif %}
+                <a href="{{ url_for('views.logout') }}">🚪 Вийти</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="flashes">
+              {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

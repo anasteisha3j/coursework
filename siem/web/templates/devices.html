@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Список девайсів</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <h1>Список пристроїв</h1>
+
+    <a href="{{ url_for('views.add_device') }}" class="add-device">➕ Додати новий девайс</a>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Назва</th>
+                <th>IP-адреса</th>
+                <th>Активний</th>
+                <th>Остання активність</th>
+                <th>Дії</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for device in devices %}
+            <tr>
+                <td>{{ device.name }}</td>
+                <td>{{ device.ip_address }}</td>
+                <td>{{ 'Так' if device.is_active else 'Ні' }}</td>
+                <td>
+   
+    {% if device.last_seen %}
+        {{ device.last_seen.strftime('%Y-%m-%d %H:%M:%S') }}
+        ({{ (now - device.last_seen)|humanize }})
+    {% else %}
+        Немає даних
+    {% endif %}
+</td>
+                </td>
+                <td class="actions">
+                    <a href="{{ url_for('views.delete_device', device_id=device.id) }}">🗑 Видалити</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <br>
+
+    <a href="{{ url_for('views.dashboard') }}" class="back-link">На головну</a>
+
+</body>
+</html>
