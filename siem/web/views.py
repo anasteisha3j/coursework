@@ -25,7 +25,7 @@ def register_organization():
 
         new_org = Organization(name=org_name)
         db.session.add(new_org)
-        db.session.flush()  # отримаємо id
+        db.session.flush()
 
         new_admin = User(
             email=admin_email,
@@ -36,7 +36,7 @@ def register_organization():
         db.session.add(new_admin)
         db.session.commit()
 
-        flash('✅ Організація зареєстрована, адмін створений!', category='success')
+        flash('Організація зареєстрована, адмін створений!', category='success')
         return redirect(url_for('views.login'))
 
     return render_template('register_organization.html')
@@ -47,7 +47,7 @@ def register_organization():
 @login_required
 def add_user():
     if current_user.role != 'admin':
-        flash('⛔ Тільки адміністратор може додавати користувачів', category='error')
+        flash('Тільки адміністратор може додавати користувачів', category='error')
         return redirect(url_for('views.dashboard'))
 
     if request.method == 'POST':
@@ -80,12 +80,6 @@ def add_user():
 
 
 
-#  Список пристроїв
-# @views.route('/devices')
-# @login_required
-# def devices():
-#     devices = Device.query.filter_by(organization_id=current_user.organization_id).all()
-#     return render_template('devices.html', devices=devices)
 
 from datetime import datetime
 
@@ -95,7 +89,6 @@ def devices():
     devices = Device.query.all()
     return render_template('devices.html', devices=devices, now=datetime.now())
 
-#  Додавання нового пристрою
 @views.route('/add_device', methods=['GET', 'POST'])
 @login_required
 def add_device():
@@ -126,7 +119,6 @@ def get_logs():
     logs = Log.query.filter_by(organization_id=current_user.organization_id)\
                     .order_by(Log.created_at.desc()).all()
 
-    # Отримуємо мапу ID → Назва пристрою
     device_map = {d.id: d.name for d in Device.query.filter_by(organization_id=current_user.organization_id).all()}
 
     return jsonify([{
@@ -160,7 +152,7 @@ def login():
             ###
         ip = request.remote_addr
         if BlockedIP.query.filter_by(ip_address=ip).first():
-            flash("⛔ Вашу IP-адресу тимчасово заблоковано", category="error")
+            flash("Вашу IP-адресу тимчасово заблоковано", category="error")
             return render_template('login.html')
 
 
@@ -175,14 +167,14 @@ from flask_login import logout_user
 @login_required
 def logout():
     logout_user()
-    flash("👋 Ви вийшли з системи", category="info")
+    flash(" Ви вийшли з системи", category="info")
     return redirect(url_for('views.login'))
 
 @views.route('/users')
 @login_required
 def users():
     if current_user.role != 'admin':
-        flash("⛔ Доступ лише для адміністратора", category='error')
+        flash("Доступ лише для адміністратора", category='error')
         return redirect(url_for('views.dashboard'))
 
     users = User.query.filter_by(organization_id=current_user.organization_id).all()
@@ -216,7 +208,6 @@ def dashboard():
 from flask import request
 from .models import BlockedIP, Log
 
-# Fix for the send_log route in your views.py file
 
 @views.route('/send_log', methods=['POST'])
 def send_log():
@@ -230,30 +221,26 @@ def send_log():
     event_type = data.get('event_type')
     severity = data.get('severity', 'info')
     details = data.get('details', '')
-    organization_id = data.get('organization_id')  # Get from request instead of current_user
+    organization_id = data.get('organization_id')  
     
-    # Validate required fields
     if not device_id or not event_type or not organization_id:
         return jsonify({'error': 'Missing required fields'}), 400
         
-    # Validate device exists and belongs to organization
     device = Device.query.get(device_id)
     if not device or str(device.organization_id) != str(organization_id):
         return jsonify({'error': 'Invalid device or organization'}), 404
 
-    # Автоблокування при DDoS
     if event_type.lower() == 'ddos':
         db.session.add(BlockedIP(ip_address=ip))
         db.session.commit()
         return jsonify({'status': 'DDoS detected — IP blocked'}), 200
 
-    # Звичайне збереження логу
     log = Log(
         device_id=device_id,
         event_type=event_type,
         severity=severity,
         details=details,
-        organization_id=organization_id  # Use the value from the request
+        organization_id=organization_id 
     )
     db.session.add(log)
     db.session.commit()
@@ -265,7 +252,7 @@ def send_log():
 @login_required
 def blocked_ips():
     if current_user.role != 'admin':
-        flash('⛔ Доступ лише адміну', 'error')
+        flash('Доступ лише адміну', 'error')
         return redirect(url_for('views.dashboard'))
     blocked = BlockedIP.query.all()
     return render_template('blocked_ips.html', ips=blocked)
@@ -274,7 +261,7 @@ def blocked_ips():
 @login_required
 def unblock_ip(ip):
     if current_user.role != 'admin':
-        flash('⛔ Недостатньо прав', 'error')
+        flash('Недостатньо прав', 'error')
         return redirect(url_for('views.dashboard'))
     blocked = BlockedIP.query.filter_by(ip_address=ip).first()
     if blocked:
@@ -284,11 +271,11 @@ def unblock_ip(ip):
     return redirect(url_for('views.blocked_ips'))
 
 
-@views.route('/block_ip/<ip>', methods=['GET', 'POST'])  # Add POST method
+@views.route('/block_ip/<ip>', methods=['GET', 'POST'])  
 @login_required
 def block_ip(ip):
     if current_user.role != 'admin':
-        flash('⛔ Недостатньо прав', 'error')
+        flash('Недостатньо прав', 'error')
         return redirect(url_for('views.dashboard'))
 
     if not BlockedIP.query.filter_by(ip_address=ip).first():
@@ -300,7 +287,7 @@ def block_ip(ip):
         )
         db.session.add(blocked_ip)
         db.session.commit()
-        flash(f'🔒 IP {ip} заблоковано вручну', 'success')
+
         return jsonify({'status': 'success', 'message': f'IP {ip} blocked'}), 200
     else:
         flash(f'⚠️ IP {ip} вже заблокований', 'warning')
@@ -314,7 +301,7 @@ from uuid import UUID
 @login_required
 def delete_user(user_id):
     try:
-        UUID(user_id, version=4)  # Перевіряє, чи це валідний UUID
+        UUID(user_id, version=4)  
     except ValueError:
         flash('❌ Недійсний UUID', 'error')
         return redirect(url_for('views.users'))
@@ -323,7 +310,7 @@ def delete_user(user_id):
     if not user:
         flash('❌ Користувача не знайдено', 'error')
     elif user.id == current_user.id:
-        flash('⛔ Неможливо видалити себе', 'error')
+        flash('Неможливо видалити себе', 'error')
     else:
         db.session.delete(user)
         db.session.commit()
@@ -356,7 +343,6 @@ def delete_device(device_id):
 
 
 
-from datetime import datetime, timedelta
 
 
 
@@ -379,11 +365,9 @@ def simulate_login_failure():
     if not device:
         return jsonify({'error': 'Device not found'}), 404
 
-    # Блокуємо, якщо вже є
     if BlockedIP.query.filter_by(ip_address=ip_address).first():
         return jsonify({'error': 'This IP is blocked'}), 403
 
-    # Логуємо помилку входу
     new_log = Log(
         device_id=device.id,
         organization_id=org_id,
@@ -398,7 +382,6 @@ def simulate_login_failure():
     db.session.add(new_log)
     db.session.commit()
 
-    # Рахуємо невдалі входи за останні 10 хв
     time_threshold = datetime.utcnow() - timedelta(minutes=10)
     recent_failures = Log.query.filter(
         Log.event_type == 'login_failure',
@@ -412,6 +395,53 @@ def simulate_login_failure():
         return jsonify({'message': f'IP {ip_address} blocked due to brute-force'}), 403
 
     return jsonify({'message': 'Login failure logged'}), 200
+
+
+
+
+
+
+
+
+from flask_login import login_required, current_user
+from sqlalchemy.orm import Session
+from .utils.reports import send_report
+from . import db  
+
+from flask import Blueprint, render_template, jsonify, request, flash
+from .utils.bot import send_report, generate_report_text  
+
+
+from flask import send_file
+import os
+
+@views.route('/generate_report', methods=["POST"])
+@login_required
+def generate_report():
+    try:
+        logs = Log.query.filter_by(organization_id=current_user.organization_id).all()
+        
+        report_message = generate_report_text(logs)  
+        
+        report_file_path = os.path.join('tmp', 'report.txt')
+
+        os.makedirs('tmp', exist_ok=True)
+        
+        with open(report_file_path, 'w') as f:
+            f.write(report_message)
+        
+        send_report(report_file_path)
+        
+        
+        os.remove(report_file_path)
+
+        return jsonify({"success": True})
+    
+    except Exception as e:
+        print(f"❌ Error generating report: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 
 
 

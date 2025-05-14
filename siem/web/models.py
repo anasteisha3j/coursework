@@ -1,74 +1,3 @@
-# import datetime
-# import uuid
-# from . import db
-# from flask_login import UserMixin
-# from datetime import datetime
-
-# class Organization(db.Model):
-#     __tablename__ = 'organizations'
-#     id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
-#     name = db.Column(db.String, unique=True, nullable=False)
-#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-#     users = db.relationship('User', backref='organization', lazy=True)
-#     devices = db.relationship('Device', backref='organization', lazy=True)
-
-# class User(db.Model, UserMixin):
-#     __tablename__ = 'users'
-#     id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
-#     email = db.Column(db.String, unique=True, nullable=False)
-#     password_hash = db.Column(db.String)
-#     role = db.Column(db.String, nullable=False)  # 'admin' or 'user'
-#     organization_id = db.Column(db.String, db.ForeignKey('organizations.id'), nullable=False)
-#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-#     def __repr__(self):
-#         return f'<User {self.email}>'
-
-#     def is_admin(self):
-#         return self.role == 'admin'
-
-# class Device(db.Model):
-#     __tablename__ = 'devices'
-#     id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
-#     organization_id = db.Column(db.String, db.ForeignKey('organizations.id'), nullable=False)
-#     name = db.Column(db.String, nullable=False)
-#     ip_address = db.Column(db.String)
-#     type = db.Column(db.String)  
-#     model = db.Column(db.String) 
-#     last_seen = db.Column(db.DateTime)
-    
-#     is_active = db.Column(db.Boolean, default=True)
-
-#     logs = db.relationship('Log', backref='device', lazy=True)
-
-# class Log(db.Model):
-#     __tablename__ = 'logs'
-#     id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
-#     device_id = db.Column(db.String, db.ForeignKey('devices.id'))
-#     organization_id = db.Column(db.String, db.ForeignKey('organizations.id'))
-#     event_type = db.Column(db.String, nullable=False)
-#     severity = db.Column(db.String)  
-#     details = db.Column(db.JSON) 
-#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-#     __table_args__ = (
-#     db.Index('idx_device_event', 'device_id', 'event_type', 'created_at'),
-#     db.Index('idx_org_event', 'organization_id', 'created_at')  # додав індекс для організації
-# )
-
-
-
-
-# #
-# class BlockedIP(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     ip_address = db.Column(db.String(100), unique=True, nullable=False)
-#     blocked_at = db.Column(db.DateTime, default=db.func.now())
-
-
-
-
 
 import uuid
 from datetime import datetime
@@ -122,7 +51,7 @@ class Device(db.Model):
     name = db.Column(db.String(100), nullable=False)
     ip_address = db.Column(db.String(15), nullable=False)
     mac_address = db.Column(db.String(17))
-    type = db.Column(db.String(50))  # 'server', 'workstation', 'camera', etc.
+    type = db.Column(db.String(50))  
     last_seen = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
 

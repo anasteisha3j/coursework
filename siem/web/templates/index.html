@@ -1,7 +1,3 @@
-
-
-
-
 <!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -9,66 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIEM Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
     <style>
-        .critical {
-            background-color: #721c24;
-            color: white;
-            border-left: 5px solid #ff0000;
-            animation: pulse 2s infinite;
-        }
-
-        .high {
-            background-color: #dc3545;
-            color: white;
-        }
-
-        .medium {
-            background-color: #fff3cd;
-        }
-
-        .low {
-            background-color: #d4edda;
-        }
-
-        /* Pinned attacks */
-        .pinned-attack {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            font-weight: bold;
-        }
-
-        /* Pulsing animation for critical alerts */
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
-
-        /* Blocked IP badge */
-        .badge-blocked {
-            background-color: #dc3545;
-            color: white;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-size: 0.8em;
-            margin-left: 5px;
-        }
-
-        /* Loading indicator */
-        #loading {
-            padding: 10px;
-            text-align: center;
-            font-weight: bold;
-        }
+       
     </style>
 </head>
 <body>
     <header>
         <h1>👁️ Журнал подій | {{ current_user.email }}</h1>
         <p>Організація: {{ current_user.organization.name }}</p>
-
         <nav>
             <a href="{{ url_for('views.devices') }}">📦 Пристрої</a>
             {% if current_user.role == 'admin' %}
@@ -81,28 +27,16 @@
 
     <main>
         <div id="loading" style="display: none;">Завантаження...</div>
-        
+
         {% if current_user.role == 'admin' %}
             <div class="admin-controls">
                 <a href="{{ url_for('views.blocked_ips') }}" class="blocked-ips-link">🚫 Заблоковані IP</a>
-                <button id="auto-block-btn" class="btn-danger">🛡️ Автоблокування</button>
             </div>
         {% endif %}
 
-
-        <!-- Add this to your admin controls section -->
         <button id="generate-report-btn" class="btn-report">📝 Згенерувати звіт</button>
 
-        <!-- Add this modal at the bottom of your body -->
-        <div id="report-modal" class="modal">
-            <div class="modal-content">
-                <span class="close">&times;</span>
-                <h2>Звіт про безпеку</h2>
-                <pre id="report-content"></pre>
-                <button id="send-to-telegram">📤 Надіслати в Telegram</button>
-            </div>
-        </div>
-        <!-- Pinned Attacks Section -->
+
         <div id="pinned-attacks">
             <h2>🔒 Важливі події</h2>
             <table>
@@ -113,15 +47,15 @@
                         <th>Рівень</th>
                         <th>Деталі</th>
                         <th>Час</th>
+                        <th>Дії</th>
                     </tr>
                 </thead>
                 <tbody id="pinned-logs">
-                    <!-- Pinned logs will appear here -->
+
                 </tbody>
             </table>
         </div>
 
-        <!-- All Logs Section -->
         <div id="all-logs">
             <h2>📜 Всі події</h2>
             <table>
@@ -136,100 +70,99 @@
                     </tr>
                 </thead>
                 <tbody id="logs-body">
-                    <!-- All logs will appear here -->
+
                 </tbody>
             </table>
         </div>
     </main>
 
-    <script>
-        // Global variable to store blocked IPs
-        let blockedIPs = new Set();
+    <div id="log-detail-modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Деталі події</h2>
+            <pre id="log-details-content"></pre>
+        </div>
+    </div>
 
+
+
+
+
+
+
+
+
+<script>
+document.getElementById('generate-report-btn').addEventListener('click', () => {
+    document.getElementById('loading').style.display = 'block';
+    
+    fetch('/generate_report', {
+        method: 'POST'
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        alert(data.message || 'Звіт надіслано в Telegram!');
+    })
+    .catch(err => {
+        alert('Помилка надсилання звіту.');
+        console.error(err);
+    })
+    .finally(() => {
+        document.getElementById('loading').style.display = 'none';
+    });
+});
+</script>
+
+
+    
+    <script>
+        let blockedIPs = new Set(); 
+    
+        // Fetch blocked IPs
         async function fetchBlockedIPs() {
             try {
                 const response = await fetch('/blocked_ips');
                 const data = await response.json();
                 blockedIPs = new Set(data.map(ip => ip.ip_address));
+                renderBlockedIPs(data);
             } catch (error) {
                 console.error('Помилка отримання заблокованих IP:', error);
             }
         }
-
-        async function fetchLogs() {
-            const loading = document.getElementById('loading');
-            loading.style.display = 'block';
     
-            try {
-                // Fetch both logs and blocked IPs
-                await fetchBlockedIPs();
-                const response = await fetch('/logs');
-                const logs = await response.json();
-                
-                const pinnedTbody = document.getElementById('pinned-logs');
-                const regularTbody = document.getElementById('logs-body');
-                
-                pinnedTbody.innerHTML = '';
-                regularTbody.innerHTML = '';
+        // Render blocked IPs in the UI
+        function renderBlockedIPs(blockedIPsData) {
+            const blockedIPsBody = document.getElementById('blocked-ips-body');
+            blockedIPsBody.innerHTML = ''; // Clear previous blocked IPs
     
-                logs.forEach(log => {
-                    const isAttack = log.event_type.includes('Attack') || 
-                                    ['critical', 'high'].includes(log.severity?.toLowerCase());
-                    const isBlocked = log.details?.source_ip && blockedIPs.has(log.details.source_ip);
-                    
-                    const tr = document.createElement('tr');
-                    tr.className = log.severity ? log.severity.toLowerCase() : '';
-                    if (isAttack) tr.classList.add('attack-row');
-                    if (isBlocked) tr.classList.add('blocked-row');
-                    
-                    const details = log.details ? JSON.stringify(log.details) : 'Немає деталей';
-                    const attackActions = isAttack ? `
-                        <td>
-                            ${!isBlocked ? `<button onclick="blockIP('${log.details?.source_ip}')" class="btn-block">🚫 Блокувати IP</button>` : ''}
-                        </td>
-                    ` : '<td></td>';
-                    
-                    tr.innerHTML = `
-                        <td>${log.device_name || 'Невідомий пристрій'}</td>
-                        <td>${log.event_type}</td>
-                        <td>
-                            ${log.severity || 'info'}
-                            ${isBlocked ? '<span class="badge-blocked">БЛОК</span>' : ''}
-                        </td>
-                        <td class="log-details">${details}</td>
-                        <td>${new Date(log.created_at).toLocaleString()}</td>
-                        ${attackActions}
-                    `;
-                    
-                    // Add to pinned if critical/high severity
-                    if (['critical', 'high'].includes(log.severity?.toLowerCase())) {
-                        tr.classList.add('pinned-attack');
-                        pinnedTbody.appendChild(tr.cloneNode(true));
-                    }
-                    
-                    regularTbody.appendChild(tr);
-                });
-            } catch (error) {
-                console.error('Не вдалося завантажити логи:', error);
-            } finally {
-                loading.style.display = 'none';
-            }
+            blockedIPsData.forEach(ipData => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${ipData.ip_address}</td>
+                    <td>${new Date(ipData.blocked_at).toLocaleString()}</td>
+                `;
+                blockedIPsBody.appendChild(row);
+            });
         }
-
+    
+        // Manually block an IP
         async function blockIP(ipAddress) {
             if (!ipAddress) return;
-            
+    
             try {
                 const response = await fetch(`/block_ip/${ipAddress}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                    }
+                    },
                 });
-                
+    
                 if (response.ok) {
                     alert(`IP ${ipAddress} успішно заблоковано`);
-                    fetchLogs(); // Refresh logs
+                    fetchLogs(); // Refresh logs to reflect any changes
                 } else {
                     alert('Помилка при блокуванні IP');
                 }
@@ -237,12 +170,157 @@
                 console.error('Помилка блокування IP:', error);
             }
         }
+    
+        // Auto-blocking function
+        // Set up event listener for auto-block button
 
-        // Initialize and refresh every 5 seconds
+        // Update logs in the main table
+function updateLogsUI(logs) {
+    const logsBody = document.getElementById('logs-body');
+    logsBody.innerHTML = '';
+
+    logs.forEach(log => {
+        const row = document.createElement('tr');
+        row.classList.add(log.severity?.toLowerCase());
+
+        const detailsButton = document.createElement('button');
+        detailsButton.textContent = 'Деталі';
+        detailsButton.addEventListener('click', () => openLogDetails(log));
+
+        const blockButton = document.createElement('button');
+        blockButton.textContent = 'Заблокувати IP';
+        blockButton.classList.add('btn-danger');
+        blockButton.addEventListener('click', () => blockIP(log.ip_address));
+
+        row.innerHTML = `
+            <td>${log.device_name}</td>
+            <td>${log.event_type}</td>
+            <td>${log.severity}</td>
+            <td></td> <!-- Деталі кнопка -->
+            <td>${new Date(log.created_at).toLocaleString()}</td>
+            <td></td> <!-- Блок кнопка -->
+        `;
+
+        row.children[3].appendChild(detailsButton);
+        row.children[5].appendChild(blockButton);
+
+        logsBody.appendChild(row);
+    });
+}
+
+    
+        // Open log details in the modal
+        function openLogDetails(log) {
+            let formattedDetails;
+            try {
+                formattedDetails = typeof log.details === 'object'
+                    ? JSON.stringify(log.details, null, 2)
+                    : log.details;
+            } catch {
+                formattedDetails = log.details;
+            }
+    
+            const content = `
+            Пристрій: ${log.device_name}
+            Тип події: ${log.event_type}
+            Рівень: ${log.severity}
+            Деталі: ${formattedDetails}
+            
+            Час: ${new Date(log.created_at).toLocaleString()}
+            `;
+            document.getElementById('log-details-content').textContent = content;
+            document.getElementById('log-detail-modal').style.display = 'block';
+        }
+    
+        // Close modal
+        function closeModal() {
+            document.getElementById('log-detail-modal').style.display = 'none';
+        }
+    
+        // Render pinned critical logs
+        function renderPinnedLogs(logs) {
+            const pinnedLogsContainer = document.getElementById('pinned-logs');
+            pinnedLogsContainer.innerHTML = '';
+    
+            const criticalLogs = logs.filter(log => log.severity === 'critical');
+    
+            criticalLogs.forEach(log => {
+                const row = document.createElement('tr');
+                row.className = log.severity;
+    
+                const detailsButton = document.createElement('button');
+                detailsButton.textContent = 'Деталі';
+                detailsButton.addEventListener('click', () => openLogDetails(log));
+    
+                const blockButton = document.createElement('button');
+                blockButton.textContent = 'Заблокувати IP';
+                blockButton.classList.add('btn-danger');
+                blockButton.addEventListener('click', () => blockIP(log.ip_address));
+    
+                row.innerHTML = `
+                    <td>${log.device_name || 'Невідомий пристрій'}</td>
+                    <td>${log.event_type}</td>
+                    <td>${log.severity}</td>
+                    <td></td> <!-- Empty for details button -->
+                    <td>${new Date(log.created_at).toLocaleString()}</td>
+                    <td></td> <!-- Empty for block button -->
+                `;
+    
+                row.querySelector('td:nth-child(4)').appendChild(detailsButton);  // Details button in the 4th column
+                row.querySelector('td:last-child').appendChild(blockButton);     // Block IP button in the actions column
+    
+                pinnedLogsContainer.appendChild(row);
+            });
+    
+            setupPinnedDetailsButtons(); // Reinitialize the event listeners for details buttons
+        }
+    
+    
+        // Setup the details buttons for pinned logs
+        function setupPinnedDetailsButtons() {
+            document.querySelectorAll('.details-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    let detailsObj;
+                    try {
+                        detailsObj = JSON.parse(button.dataset.details);
+                    } catch {
+                        detailsObj = button.dataset.details;
+                    }
+    
+                    const log = {
+                        device_name: button.dataset.device,
+                        event_type: button.dataset.type,
+                        severity: button.dataset.severity,
+                        details: detailsObj,
+                        created_at: button.dataset.time
+                    };
+    
+                    openLogDetails(log);
+                });
+            });
+        }
+    
+        // Fetch logs
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/logs');
+                const logs = await response.json();
+                updateLogsUI(logs); // Update UI with new logs
+                renderPinnedLogs(logs); // Render pinned logs
+            } catch (error) {
+                console.error('Помилка при отриманні логів:', error);
+            }
+        }
+    
+        // Fetch logs and blocked IPs when the page loads
         fetchLogs();
-        setInterval(fetchLogs, 5000);
-        
+        fetchBlockedIPs();
+        setInterval(fetchLogs, 5000); // Refresh logs every 5 seconds
     </script>
+
+
+
+
 </body>
 </html>
-
+    

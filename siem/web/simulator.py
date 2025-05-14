@@ -5,7 +5,7 @@ from datetime import datetime
 from faker import Faker
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from .models import Device, Log, Organization
+from .models import Device, Log, Organization, User
 
 fake = Faker()
 
@@ -21,6 +21,41 @@ class DeviceSimulator:
             "Brute Force SSH", "SQL Injection", "DDoS",
             "Port Scanning", "Malware Download", "Phishing Attempt"
         ]
+        self.ATTACK_TYPES += ["Credential Stuffing", "Phishing Login"]
+        
+        
+        
+        
+    def simulate_user_attack(self):
+        """Simulate attack targeting user credentials"""
+        users = self.session.query(User).all()
+        if not users:
+            print("❗ No users found to simulate user-based attacks.")
+            return
+
+        user = random.choice(users)
+        attack_type = random.choice(["Credential Stuffing", "Phishing Login"])
+        severity = random.choice(["high", "critical"])
+
+        log = Log(
+            id=str(uuid.uuid4()),
+            device_id=None,  # optional: could link to the device they're using
+            organization_id=user.organization_id,
+            event_type="User Security Alert",
+            severity=severity,
+            details={
+                "message": f"{attack_type} attempt on user {user.email}",
+                "user_email": user.email,
+                "attack_type": attack_type,
+                "ip_address": fake.ipv4(),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        )
+        self.session.add(log)
+        self.session.commit()
+        print(f"⚠️  Simulated {attack_type} attack on {user.email}")
+
+
 
     def _get_or_create_org(self):
         """Get or create test organization"""
@@ -141,9 +176,15 @@ class DeviceSimulator:
         try:
             while True:
                 self.normal_activity(devices)
-                if len(devices) >= 2 and random.random() < 0.7:
+
+                if len(devices) >= 2 and random.random() < 0.6:
                     self.simulate_attack(devices)
+
+                if random.random() < 0.3:  # ~30% chance to run user attack
+                    self.simulate_user_attack()
+
                 time.sleep(self.ATTACK_INTERVAL)
+
         except KeyboardInterrupt:
             print("\n🛑 Stopping simulator...")
         finally:

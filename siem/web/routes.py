@@ -7,11 +7,10 @@ from werkzeug.security import generate_password_hash
 
 api = Blueprint('api', __name__)
 
-# Отримання логів (для адміністраторів організації)
 @api.route('/logs', methods=['GET'])
 @login_required
 def get_logs():
-    if not current_user.is_admin():  # Check if the user is an admin
+    if not current_user.is_admin():  
         return jsonify({'error': 'Access denied'}), 403
 
     logs = Log.query.join(Device).filter_by(organization_id=current_user.organization_id)\
@@ -31,7 +30,6 @@ def get_logs():
 
 
 
-# Створення логів
 @api.route('/logs', methods=['POST'])
 @login_required
 def create_log():
@@ -39,7 +37,6 @@ def create_log():
     if not data or not all(key in data for key in ['device_name', 'organization_id', 'event_type', 'severity']):
         return jsonify({'error': 'Missing required fields'}), 400
 
-    # Перевірка, чи належить лог до організації користувача
     if data['organization_id'] != current_user.organization_id:
         return jsonify({'error': 'Access denied to other organization logs'}), 403
 
@@ -54,28 +51,13 @@ def create_log():
     db.session.commit()
     return jsonify({'message': 'Log added', 'id': log.id}), 201
 
-# Отримання пристроїв (для адміністраторів організації)
-# @api.route('/devices', methods=['GET'])
-# @login_required
-# def get_devices():
-#     devices = Device.query.filter_by(organization_id=current_user.organization_id).all()
-#     return jsonify([{
-#         'id': d.id,
-#         'name': d.name,
-#         'ip_address': d.ip_address,
-#         'last_seen': d.last_seen,
-#         'is_active': d.is_active,
-#         'organization_id': d.organization_id
-#     } for d in devices])
-
-
 
 
 @api.route('/devices', methods=['GET'])
 @login_required
 def get_devices():
     page = request.args.get('page', 1, type=int)
-    per_page = 10  # Adjust as needed
+    per_page = 10  
 
     devices = Device.query.filter_by(organization_id=current_user.organization_id)\
                           .paginate(page, per_page, False)
@@ -90,7 +72,6 @@ def get_devices():
     } for d in devices.items])
 
 
-# Отримання організацій (можна зробити доступно тільки для адміністраторів)
 @api.route('/organizations', methods=['GET'])
 @login_required
 def get_organizations():
@@ -117,12 +98,10 @@ def register_organization():
             flash("Організація з такою назвою вже існує", "error")
             return redirect(url_for('api.register_organization'))
 
-        # Створення організації
         new_org = Organization(name=org_name)
         db.session.add(new_org)
         db.session.commit()
 
-        # Створення адміністратора
         new_admin = User(
             email=email,
             password_hash=generate_password_hash(password),
@@ -136,3 +115,7 @@ def register_organization():
         return redirect(url_for('views.login'))
 
     return render_template('register_organization.html')
+
+
+
+

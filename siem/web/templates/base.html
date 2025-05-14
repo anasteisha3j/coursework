@@ -1,15 +1,18 @@
-<!-- templates/base.html -->
 <!DOCTYPE html>
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIEM Dashboard</title>
+    <title>{% block title %}SIEM Dashboard{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <header>
-        <h1>SIEM Dashboard</h1>
+        <h1>{% block header_title %}SIEM Dashboard{% endblock %}</h1>
+        {% if current_user.is_authenticated %}
+            <p>Організація: {{ current_user.organization.name }}</p>
+        {% endif %}
         <nav>
             <div class="main-nav">
                 <a href="{{ url_for('views.dashboard') }}">🏠 Головна</a>
@@ -36,5 +39,7 @@
 
         {% block content %}{% endblock %}
     </main>
+
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>
