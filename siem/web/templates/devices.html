@@ -31,7 +31,6 @@
    
     {% if device.last_seen %}
         {{ device.last_seen.strftime('%Y-%m-%d %H:%M:%S') }}
-        ({{ (now - device.last_seen)|humanize }})
     {% else %}
         Немає даних
     {% endif %}

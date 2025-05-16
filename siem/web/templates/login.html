@@ -19,6 +19,8 @@
         <button type="submit">Увійти</button>
     </form>
 
+    <a href="{{ url_for('views.register_organization') }}" class="alt-button">➡ Реєстрація</a>
+
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <ul class="flashes">

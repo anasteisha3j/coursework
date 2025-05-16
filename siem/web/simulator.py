@@ -6,6 +6,8 @@ from faker import Faker
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from .models import Device, Log, Organization, User
+from werkzeug.security import generate_password_hash  
+
 
 fake = Faker()
 
@@ -16,7 +18,7 @@ class DeviceSimulator:
         self.Session = sessionmaker(bind=self.engine)
         self.session = self.Session()
         self.DEVICE_COUNT = 10
-        self.ATTACK_INTERVAL = 30  # seconds
+        self.ATTACK_INTERVAL = 10  # seconds
         self.ATTACK_TYPES = [
             "Brute Force SSH", "SQL Injection", "DDoS",
             "Port Scanning", "Malware Download", "Phishing Attempt"
@@ -27,10 +29,9 @@ class DeviceSimulator:
         
         
     def simulate_user_attack(self):
-        """Simulate attack targeting user credentials"""
         users = self.session.query(User).all()
         if not users:
-            print("❗ No users found to simulate user-based attacks.")
+            print("No users found to simulate user-based attacks.")
             return
 
         user = random.choice(users)
@@ -39,7 +40,7 @@ class DeviceSimulator:
 
         log = Log(
             id=str(uuid.uuid4()),
-            device_id=None,  # optional: could link to the device they're using
+            device_id=None,  
             organization_id=user.organization_id,
             event_type="User Security Alert",
             severity=severity,
@@ -53,25 +54,25 @@ class DeviceSimulator:
         )
         self.session.add(log)
         self.session.commit()
-        print(f"⚠️  Simulated {attack_type} attack on {user.email}")
+        print(f"  Simulated {attack_type} attack on {user.email}")
+        
 
 
 
-    def _get_or_create_org(self):
-        """Get or create test organization"""
-        org = self.session.query(Organization).first()
+    def _get_or_create_org(self, org_name="my1"):
+        org = self.session.query(Organization).filter_by(name=org_name).first()
         if not org:
             org = Organization(
                 id=str(uuid.uuid4()),
-                name="Test Org",
+                name=org_name,
                 created_at=datetime.utcnow()
             )
             self.session.add(org)
             self.session.commit()
         return org
 
-    def create_test_devices(self):
-        """Create test devices in the database"""
+
+    def create_test_devices(self,org_name="my1"):
         org = self._get_or_create_org()
         
         devices = []
@@ -92,8 +93,29 @@ class DeviceSimulator:
         self.session.commit()
         return devices
 
+
+
+    def create_test_users(self, count=10,org_name="my1"):
+        org = self._get_or_create_org()
+
+        for _ in range(count):
+            user = User(
+                id=str(uuid.uuid4()),
+                organization_id=org.id,
+                email=fake.unique.email(),
+                password_hash=generate_password_hash("test1234"),  # default password
+                role=random.choice(['user', 'auditor']),  # or just 'user'
+                created_at=datetime.utcnow(),
+                last_login=None
+            )
+            self.session.add(user)
+
+        self.session.commit()
+        print(f"Created {count} test users.")
+
+
+
     def normal_activity(self, devices):
-        """Simulate normal device activity"""
         if not devices:
             return
             
@@ -119,8 +141,7 @@ class DeviceSimulator:
         self.session.commit()
 
     def simulate_attack(self, devices):
-        """Simulate a security attack"""
-        if len(devices) < 2:  # Need at least 2 devices for attack simulation
+        if len(devices) < 2:  
             print("Not enough devices to simulate attack (need at least 2)")
             return
             
@@ -163,15 +184,18 @@ class DeviceSimulator:
         self.session.commit()
 
     def run(self):
-        print("🚀 Starting SIEM device simulator...")
+        print("Starting SIEM device simulator...")
+        users = self.session.query(User).all()
+        if not users:
+            print("No users found. Creating test users...")
+            self.create_test_users(10)
         
-        # Get existing devices or create new ones
         devices = self.session.query(Device).all()
-        if not devices:
-            print("No devices found, creating test devices...")
-            devices = self.create_test_devices()
+        # if not devices:
+        #     print("No devices found, creating test devices...")
+        #     devices = self.create_test_devices()
         
-        print(f"Monitoring {len(devices)} devices...")
+        # print(f"Monitoring {len(devices)} devices...")
         
         try:
             while True:
@@ -180,15 +204,14 @@ class DeviceSimulator:
                 if len(devices) >= 2 and random.random() < 0.6:
                     self.simulate_attack(devices)
 
-                if random.random() < 0.3:  # ~30% chance to run user attack
+                if random.random() < 0.4:  # 40% chance to run user attack
                     self.simulate_user_attack()
 
                 time.sleep(self.ATTACK_INTERVAL)
 
         except KeyboardInterrupt:
-            print("\n🛑 Stopping simulator...")
+            print("\n Stopping simulator...")
         finally:
             self.session.close()
 
-# Export the simulator class
 sim = DeviceSimulator

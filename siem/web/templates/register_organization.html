@@ -21,6 +21,8 @@
         <button type="submit">Зареєструвати</button>
     </form>
 
+    <a href="{{ url_for('views.login') }}" class="alt-button">⬅ Вхід</a>
+
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <ul class="flashes">

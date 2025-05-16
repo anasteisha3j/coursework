@@ -5,10 +5,10 @@
     <title>Додати користувача</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="add-user">
     <h1>Додати нового користувача</h1>
 
-    <form method="POST">
+    <form method="POST" class="add-user-form">
         <label for="email">Email користувача:</label>
         <input type="email" id="email" name="email" required>
 
