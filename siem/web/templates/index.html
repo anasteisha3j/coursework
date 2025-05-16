@@ -26,7 +26,7 @@
     </header>
 
     <main>
-        <div id="loading" style="display: none;">Завантаження...</div>
+        <div id="loading" style="display: none;" >Завантаження...</div>
 
         {% if current_user.role == 'admin' %}
             <div class="admin-controls">
@@ -34,7 +34,7 @@
             </div>
         {% endif %}
 
-        <button id="generate-report-btn" class="btn-report">📝 Згенерувати звіт</button>
+        <button id="generate-report-btn" class="btn-report">Згенерувати звіт</button>
 
 
         <div id="pinned-attacks">
@@ -92,36 +92,9 @@
 
 
 
-<script>
-document.getElementById('generate-report-btn').addEventListener('click', () => {
-    document.getElementById('loading').style.display = 'block';
-    
-    fetch('/generate_report', {
-        method: 'POST'
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-    })
-    .then(data => {
-        alert(data.message || 'Звіт надіслано в Telegram!');
-    })
-    .catch(err => {
-        alert('Помилка надсилання звіту.');
-        console.error(err);
-    })
-    .finally(() => {
-        document.getElementById('loading').style.display = 'none';
-    });
-});
-</script>
-
-
-    
     <script>
         let blockedIPs = new Set(); 
     
-        // Fetch blocked IPs
         async function fetchBlockedIPs() {
             try {
                 const response = await fetch('/blocked_ips');
@@ -133,10 +106,11 @@ document.getElementById('generate-report-btn').addEventListener('click', () => {
             }
         }
     
-        // Render blocked IPs in the UI
         function renderBlockedIPs(blockedIPsData) {
             const blockedIPsBody = document.getElementById('blocked-ips-body');
-            blockedIPsBody.innerHTML = ''; // Clear previous blocked IPs
+            if (!blockedIPsBody) return;
+    
+            blockedIPsBody.innerHTML = ''; 
     
             blockedIPsData.forEach(ipData => {
                 const row = document.createElement('tr');
@@ -151,65 +125,60 @@ document.getElementById('generate-report-btn').addEventListener('click', () => {
         // Manually block an IP
         async function blockIP(ipAddress) {
             if (!ipAddress) return;
+            console.log('Blocking IP:', ipAddress);  
     
             try {
                 const response = await fetch(`/block_ip/${ipAddress}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    method: 'POST'
                 });
     
+                const result = await response.json();
+                alert(result.message || 'IP заблоковано');
+    
                 if (response.ok) {
-                    alert(`IP ${ipAddress} успішно заблоковано`);
-                    fetchLogs(); // Refresh logs to reflect any changes
-                } else {
-                    alert('Помилка при блокуванні IP');
+                    fetchLogs();       
+                    fetchBlockedIPs(); 
                 }
             } catch (error) {
                 console.error('Помилка блокування IP:', error);
             }
         }
     
-        // Auto-blocking function
-        // Set up event listener for auto-block button
-
-        // Update logs in the main table
-function updateLogsUI(logs) {
-    const logsBody = document.getElementById('logs-body');
-    logsBody.innerHTML = '';
-
-    logs.forEach(log => {
-        const row = document.createElement('tr');
-        row.classList.add(log.severity?.toLowerCase());
-
-        const detailsButton = document.createElement('button');
-        detailsButton.textContent = 'Деталі';
-        detailsButton.addEventListener('click', () => openLogDetails(log));
-
-        const blockButton = document.createElement('button');
-        blockButton.textContent = 'Заблокувати IP';
-        blockButton.classList.add('btn-danger');
-        blockButton.addEventListener('click', () => blockIP(log.ip_address));
-
-        row.innerHTML = `
-            <td>${log.device_name}</td>
-            <td>${log.event_type}</td>
-            <td>${log.severity}</td>
-            <td></td> <!-- Деталі кнопка -->
-            <td>${new Date(log.created_at).toLocaleString()}</td>
-            <td></td> <!-- Блок кнопка -->
-        `;
-
-        row.children[3].appendChild(detailsButton);
-        row.children[5].appendChild(blockButton);
-
-        logsBody.appendChild(row);
-    });
-}
-
+        function updateLogsUI(logs) {
+            const logsBody = document.getElementById('logs-body');
+            if (!logsBody) return;
     
-        // Open log details in the modal
+            logsBody.innerHTML = '';
+    
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.classList.add(log.severity?.toLowerCase());
+    
+                const detailsButton = document.createElement('button');
+                detailsButton.textContent = 'Деталі';
+                detailsButton.addEventListener('click', () => openLogDetails(log));
+    
+                const blockButton = document.createElement('button');
+                blockButton.textContent = 'Заблокувати IP';
+                blockButton.classList.add('btn-danger');
+                blockButton.addEventListener('click', () => blockIP(log.ip_address));
+    
+                row.innerHTML = `
+                    <td>${log.device_name}</td>
+                    <td>${log.event_type}</td>
+                    <td>${log.severity}</td>
+                    <td></td>
+                    <td>${new Date(log.created_at).toLocaleString()}</td>
+                    <td></td>
+                `;
+    
+                row.children[3].appendChild(detailsButton);
+                row.children[5].appendChild(blockButton);
+    
+                logsBody.appendChild(row);
+            });
+        }
+    
         function openLogDetails(log) {
             let formattedDetails;
             try {
@@ -221,27 +190,26 @@ function updateLogsUI(logs) {
             }
     
             const content = `
-            Пристрій: ${log.device_name}
-            Тип події: ${log.event_type}
-            Рівень: ${log.severity}
-            Деталі: ${formattedDetails}
-            
-            Час: ${new Date(log.created_at).toLocaleString()}
+    Пристрій: ${log.device_name}
+    Тип події: ${log.event_type}
+    Рівень: ${log.severity}
+    Деталі: ${formattedDetails}
+    
+    Час: ${new Date(log.created_at).toLocaleString()}
             `;
             document.getElementById('log-details-content').textContent = content;
             document.getElementById('log-detail-modal').style.display = 'block';
         }
     
-        // Close modal
         function closeModal() {
             document.getElementById('log-detail-modal').style.display = 'none';
         }
     
-        // Render pinned critical logs
         function renderPinnedLogs(logs) {
             const pinnedLogsContainer = document.getElementById('pinned-logs');
-            pinnedLogsContainer.innerHTML = '';
+            if (!pinnedLogsContainer) return;
     
+            pinnedLogsContainer.innerHTML = '';
             const criticalLogs = logs.filter(log => log.severity === 'critical');
     
             criticalLogs.forEach(log => {
@@ -261,62 +229,61 @@ function updateLogsUI(logs) {
                     <td>${log.device_name || 'Невідомий пристрій'}</td>
                     <td>${log.event_type}</td>
                     <td>${log.severity}</td>
-                    <td></td> <!-- Empty for details button -->
+                    <td></td>
                     <td>${new Date(log.created_at).toLocaleString()}</td>
-                    <td></td> <!-- Empty for block button -->
+                    <td></td>
                 `;
     
-                row.querySelector('td:nth-child(4)').appendChild(detailsButton);  // Details button in the 4th column
-                row.querySelector('td:last-child').appendChild(blockButton);     // Block IP button in the actions column
+                row.querySelector('td:nth-child(4)').appendChild(detailsButton);
+                row.querySelector('td:last-child').appendChild(blockButton);
     
                 pinnedLogsContainer.appendChild(row);
             });
-    
-            setupPinnedDetailsButtons(); // Reinitialize the event listeners for details buttons
         }
     
-    
-        // Setup the details buttons for pinned logs
-        function setupPinnedDetailsButtons() {
-            document.querySelectorAll('.details-btn').forEach(button => {
-                button.addEventListener('click', () => {
-                    let detailsObj;
-                    try {
-                        detailsObj = JSON.parse(button.dataset.details);
-                    } catch {
-                        detailsObj = button.dataset.details;
-                    }
-    
-                    const log = {
-                        device_name: button.dataset.device,
-                        event_type: button.dataset.type,
-                        severity: button.dataset.severity,
-                        details: detailsObj,
-                        created_at: button.dataset.time
-                    };
-    
-                    openLogDetails(log);
-                });
-            });
-        }
-    
-        // Fetch logs
         async function fetchLogs() {
             try {
                 const response = await fetch('/logs');
                 const logs = await response.json();
-                updateLogsUI(logs); // Update UI with new logs
-                renderPinnedLogs(logs); // Render pinned logs
+                updateLogsUI(logs);
+                renderPinnedLogs(logs);
             } catch (error) {
                 console.error('Помилка при отриманні логів:', error);
             }
         }
     
-        // Fetch logs and blocked IPs when the page loads
         fetchLogs();
         fetchBlockedIPs();
-        setInterval(fetchLogs, 5000); // Refresh logs every 5 seconds
+        setInterval(fetchLogs, 5000);
+    
+        // Report Generation
+        document.getElementById('generate-report-btn')?.addEventListener('click', () => {
+            document.getElementById('loading').style.display = 'block';
+            
+            fetch('/generate_report', {
+                method: 'POST'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                alert(data.message || 'Звіт надіслано в Telegram!');
+            })
+            .catch(err => {
+                alert('Помилка надсилання звіту.');
+                console.error(err);
+            })
+            .finally(() => {
+                document.getElementById('loading').style.display = 'none';
+            });
+        });
     </script>
+    
+
+
+
+
 
 
 

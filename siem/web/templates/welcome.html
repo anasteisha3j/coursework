@@ -5,11 +5,11 @@
     <title>Ласкаво просимо</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="welcome">
     <h1>👋 Вітаємо у SIEM системі</h1>
     <p>Для початку роботи увійдіть або зареєструйте організацію.</p>
 
-    <a href="{{ url_for('views.login') }}"><button>🔐 Увійти</button></a>
-    <a href="{{ url_for('views.register_organization') }}"><button>📝 Зареєструватися</button></a>
+    <a href="{{ url_for('views.login') }}"><button>УВІЙТИ</button></a>
+    <a href="{{ url_for('views.register_organization') }}"><button>ЗАРЕЄСТРУВАТИСЬ</button></a>
 </body>
 </html>

@@ -112,26 +112,34 @@ def add_device():
 
     return render_template('add_device.html')
 
-# API для отримання логів у JSON
+
+
 @views.route('/logs')
 @login_required
 def get_logs():
     logs = Log.query.filter_by(organization_id=current_user.organization_id)\
                     .order_by(Log.created_at.desc()).all()
 
-    device_map = {d.id: d.name for d in Device.query.filter_by(organization_id=current_user.organization_id).all()}
+    device_map = {
+        d.id: {"name": d.name, "ip": d.ip_address}
+        for d in Device.query.filter_by(organization_id=current_user.organization_id).all()
+    }
 
     return jsonify([{
         'id': log.id,
         'device_id': log.device_id,
-        'device_name': device_map.get(log.device_id, 'Невідомий пристрій'),
-        #'organization_name': log.organization_name,
-        #'organization_id': log.organization_id,
+        'device_name': device_map.get(log.device_id, {}).get('name', 'Невідомий пристрій'),
         'event_type': log.event_type,
         'severity': log.severity,
         'details': log.details,
+        'ip_address': (
+            log.details.get('ip') if isinstance(log.details, dict) and 'ip' in log.details
+            else device_map.get(log.device_id, {}).get('ip')
+        ),
         'created_at': log.created_at.isoformat()
     } for log in logs])
+
+
 
 
 
@@ -235,13 +243,20 @@ def send_log():
         db.session.commit()
         return jsonify({'status': 'DDoS detected — IP blocked'}), 200
 
+
+    
     log = Log(
-        device_id=device_id,
-        event_type=event_type,
-        severity=severity,
-        details=details,
-        organization_id=organization_id 
-    )
+    device_id=device_id,
+    event_type=event_type,
+    severity=severity,
+    details={
+        'message': 'Device compromised',
+        'reason': 'Brute Force SSH',
+        'ip': request.remote_addr  \
+    },
+    organization_id=organization_id 
+)
+
     db.session.add(log)
     db.session.commit()
     return jsonify({'status': 'Log saved'}), 201
@@ -271,14 +286,18 @@ def unblock_ip(ip):
     return redirect(url_for('views.blocked_ips'))
 
 
+
+
 @views.route('/block_ip/<ip>', methods=['GET', 'POST'])  
 @login_required
 def block_ip(ip):
-    if current_user.role != 'admin':
-        flash('Недостатньо прав', 'error')
-        return redirect(url_for('views.dashboard'))
+    print(f"[DEBUG] Incoming block request for IP: {ip}") 
 
-    if not BlockedIP.query.filter_by(ip_address=ip).first():
+    if current_user.role != 'admin':
+        return jsonify({'status': 'error', 'message': 'Недостатньо прав'}), 403
+
+    existing = BlockedIP.query.filter_by(ip_address=ip).first()
+    if not existing:
         blocked_ip = BlockedIP(
             ip_address=ip,
             reason="Manual block from dashboard",
@@ -287,11 +306,10 @@ def block_ip(ip):
         )
         db.session.add(blocked_ip)
         db.session.commit()
-
-        return jsonify({'status': 'success', 'message': f'IP {ip} blocked'}), 200
+        return jsonify({'status': 'success', 'message': f'IP {ip} успішно заблоковано'}), 200
     else:
-        flash(f'⚠️ IP {ip} вже заблокований', 'warning')
-        return jsonify({'status': 'exists', 'message': f'IP {ip} already blocked'}), 200
+        return jsonify({'status': 'exists', 'message': f'⚠️ IP {ip} вже заблокований'}), 200
+
 
 
 
@@ -359,14 +377,14 @@ def simulate_login_failure():
 
     organization = Organization.query.get(org_id)
     if not organization:
-        return jsonify({'error': 'Organization not found'}), 404
+        return jsonify({'error': 'Організацію не знайдено'}), 404
 
     device = Device.query.filter_by(ip_address=ip_address).first()
     if not device:
-        return jsonify({'error': 'Device not found'}), 404
+        return jsonify({'error': 'Пристрій не знайдено'}), 404
 
     if BlockedIP.query.filter_by(ip_address=ip_address).first():
-        return jsonify({'error': 'This IP is blocked'}), 403
+        return jsonify({'error': 'Ця IP-адреса заблокована'}), 403
 
     new_log = Log(
         device_id=device.id,
@@ -376,7 +394,7 @@ def simulate_login_failure():
         details={
             'email': user_email,
             'ip': ip_address,
-            'reason': 'Invalid password attempt'
+            'reason': 'неправильний пароль'
         }
     )
     db.session.add(new_log)
@@ -392,9 +410,9 @@ def simulate_login_failure():
     if recent_failures >= 5:
         db.session.add(BlockedIP(ip_address=ip_address))
         db.session.commit()
-        return jsonify({'message': f'IP {ip_address} blocked due to brute-force'}), 403
+        return jsonify({'message': f'IP {ip_address} заблоковано'}), 403
 
-    return jsonify({'message': 'Login failure logged'}), 200
+    return jsonify({'message': 'Помилка входу'}), 200
 
 
 
@@ -438,7 +456,7 @@ def generate_report():
         return jsonify({"success": True})
     
     except Exception as e:
-        print(f"❌ Error generating report: {e}")
+        print(f" Помилка генерування звіту: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
