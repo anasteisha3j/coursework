@@ -96,6 +96,23 @@ class Log(db.Model):
 
     def __repr__(self):
         return f'<Log {self.event_type}@{self.created_at}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'device_id': self.device_id,
+            'event_type': self.event_type,
+            'severity': self.severity,
+            'details': self.details if isinstance(self.details, dict) else {},
+            'created_at': self.created_at.isoformat(),
+            'ip_address': (
+                self.details.get('ip') if isinstance(self.details, dict) and 'ip' in self.details
+                else self.device.ip_address if self.device else None
+            ),
+            'device_name': self.device.name if self.device else 'Невідомий пристрій'
+        }
+    
+    
 
 class BlockedIP(db.Model):
     __tablename__ = 'blocked_ips'

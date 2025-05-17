@@ -35,21 +35,50 @@ def send_report(file_path):
     
     
     
-def generate_report_text(logs):
+
+def generate_report_text(logs, start_date=None, end_date=None):
     if not logs:
-        return "Немає подій для звіту."
-
-    lines = ["*Звіт про події* — {0}\n".format(datetime.utcnow().strftime("%Y-%m-%d %H:%M"))]
+        return "Не знайдено подій для генерації звіту"
+    
+    report_lines = []
+    
+    if start_date and end_date:
+        report_lines.append(f"ЗВІТ ПРО ПОДІЇ БЕЗПЕКИ")
+        report_lines.append(f"Період: з {start_date} по {end_date}")
+        report_lines.append("="*50)
+    else:
+        report_lines.append("ЗВІТ")
+        report_lines.append("="*50)
+    
+    events_by_type = {}
     for log in logs:
-        lines.append(f"""
- *Пристрій:* {log.device.name if log.device else 'Невідомо'}
- *Подія:* {log.event_type}
- *Рівень:* {log.severity}
- *Час:* {log.created_at.strftime("%Y-%m-%d %H:%M:%S")}
- *Деталі:* `{str(log.details)[:200]}`
-        """)
-
-    return "\n".join(lines)
-
-
+        if log.event_type not in events_by_type:
+            events_by_type[log.event_type] = []
+        events_by_type[log.event_type].append(log)
+    
+    for event_type, event_logs in events_by_type.items():
+        report_lines.append(f"\nТип події: {event_type.upper()}")
+        report_lines.append(f"Кількість: {len(event_logs)}")
+        
+        report_lines.append("\nОстанні події:")
+        for log in event_logs[:5]:
+            report_lines.append(f"- [{log.created_at}] : {log.details}")
+    
+    severity_counts = {
+        'critical': 0,
+        'high': 0,
+        'medium': 0,
+        'low': 0
+    }
+    
+    for log in logs:
+        severity = log.severity.lower()
+        if severity in severity_counts:
+            severity_counts[severity] += 1
+    
+    report_lines.append("\nСТАТИСТИКА ЗА РІВНЯМИ:")
+    for level, count in severity_counts.items():
+        report_lines.append(f"- {level.upper()}: {count}")
+    
+    return "\n".join(report_lines)
 

@@ -1,3 +1,9 @@
+
+
+
+
+
+
 from flask import Blueprint, render_template, jsonify, request, redirect, url_for, flash
 from flask_login import login_required, current_user, login_user
 from werkzeug.security import check_password_hash,generate_password_hash
@@ -36,7 +42,6 @@ def register_organization():
         db.session.add(new_admin)
         db.session.commit()
 
-        flash('Організація зареєстрована, адмін створений!', category='success')
         return redirect(url_for('views.login'))
 
     return render_template('register_organization.html')
@@ -89,28 +94,71 @@ def devices():
     devices = Device.query.all()
     return render_template('devices.html', devices=devices, now=datetime.now())
 
+# @views.route('/add_device', methods=['GET', 'POST'])
+# @login_required
+# def add_device():
+#     if request.method == 'POST':
+#         name = request.form.get('name')
+#         ip_address = request.form.get('ip_address')
+
+#         if not name or not ip_address:
+#             flash("Будь ласка, заповніть всі поля", category="error")
+#             return redirect(url_for('views.add_device'))
+
+#         new_device = Device(
+#             name=name,
+#             ip_address=ip_address,
+#             organization_id=current_user.organization_id
+#         )
+#         db.session.add(new_device)
+#         db.session.commit()
+
+#         return redirect(url_for('views.devices'))
+
+#     return render_template('add_device.html')
+
+
 @views.route('/add_device', methods=['GET', 'POST'])
 @login_required
 def add_device():
     if request.method == 'POST':
         name = request.form.get('name')
         ip_address = request.form.get('ip_address')
+        mac_address = request.form.get('mac_address')
+        device_type = request.form.get('type')
 
-        if not name or not ip_address:
+        if not name or not ip_address or not mac_address or not device_type:
             flash("Будь ласка, заповніть всі поля", category="error")
             return redirect(url_for('views.add_device'))
 
         new_device = Device(
             name=name,
             ip_address=ip_address,
-            organization_id=current_user.organization_id
+            mac_address=mac_address,
+            type=device_type,
+            organization_id=current_user.organization_id,
+            is_active=True,  
+            last_seen=datetime.utcnow() 
         )
+        existing_mac = Device.query.filter_by(mac_address=mac_address).first()
+        existing_ip = Device.query.filter_by(ip_address=ip_address).first()
+
+        if existing_mac:
+            flash("Цей MAC-адрес уже використовується", category="error")
+            return redirect(url_for('views.add_device'))
+
+        if existing_ip:
+            flash("Ця IP-адреса уже використовується", category="error")
+            return redirect(url_for('views.add_device'))
+
         db.session.add(new_device)
         db.session.commit()
 
         return redirect(url_for('views.devices'))
 
-    return render_template('add_device.html')
+    current_time = datetime.utcnow().strftime('%Y-%m-%dT%H:%M')
+    return render_template('add_device.html', current_time=current_time)
+
 
 
 
@@ -118,26 +166,8 @@ def add_device():
 @login_required
 def get_logs():
     logs = Log.query.filter_by(organization_id=current_user.organization_id)\
-                    .order_by(Log.created_at.desc()).all()
-
-    device_map = {
-        d.id: {"name": d.name, "ip": d.ip_address}
-        for d in Device.query.filter_by(organization_id=current_user.organization_id).all()
-    }
-
-    return jsonify([{
-        'id': log.id,
-        'device_id': log.device_id,
-        'device_name': device_map.get(log.device_id, {}).get('name', 'Невідомий пристрій'),
-        'event_type': log.event_type,
-        'severity': log.severity,
-        'details': log.details,
-        'ip_address': (
-            log.details.get('ip') if isinstance(log.details, dict) and 'ip' in log.details
-            else device_map.get(log.device_id, {}).get('ip')
-        ),
-        'created_at': log.created_at.isoformat()
-    } for log in logs])
+                   .order_by(Log.created_at.desc()).all()
+    return jsonify([log.to_dict() for log in logs])
 
 
 
@@ -194,19 +224,69 @@ def users():
 def index():
     if current_user.is_authenticated:
         logs = Log.query.filter_by(organization_id=current_user.organization_id)\
-                        .order_by(Log.created_at.desc()).all()
-        return render_template('index.html', logs=logs)
+                       .order_by(Log.created_at.desc()).all()
+        return render_template('index.html', logs=[log.to_dict() for log in logs])
     return render_template('welcome.html')
-
 
 @views.route('/dashboard')
 @login_required
 def dashboard():
-    logs = Log.query.join(Device).filter_by(organization_id=current_user.organization_id)\
-                .add_columns(Device.name.label('device_name'))\
-                .order_by(Log.created_at.desc()).all()
+    selected_date = request.args.get('date')
+    
+    query = Log.query.filter_by(organization_id=current_user.organization_id)
+    
+    if selected_date:
+        try:
+            date_obj = datetime.strptime(selected_date, '%Y-%m-%d')
+            start_of_day = datetime.combine(date_obj.date(), datetime.min.time())
+            end_of_day = datetime.combine(date_obj.date(), datetime.max.time())
+            query = query.filter(Log.created_at.between(start_of_day, end_of_day))
+        except ValueError:
+            pass
+    
+    logs = query.order_by(Log.created_at.desc()).all()
+    return render_template('index.html', 
+                         logs=[log.to_dict() for log in logs],
+                         selected_date=selected_date)
 
-    return render_template('index.html', logs=logs)
+
+# @views.route('/dashboard')
+# @login_required
+# def dashboard():
+#     logs = Log.query.join(Device).filter_by(organization_id=current_user.organization_id)\
+#                 .add_columns(Device.name.label('device_name'))\
+#                 .order_by(Log.created_at.desc()).all()
+
+#     return render_template('index.html', logs=logs)
+from flask import render_template, request
+from flask_login import login_required, current_user
+from datetime import datetime, timedelta
+from .models import Log  # або звідки у тебе там Log
+
+# @views.route('/dashboard', methods=['GET'])
+# @login_required
+# def dashboard():
+#     selected_date = request.args.get('date')
+
+#     if selected_date:
+#         try:
+#             date_obj = datetime.strptime(selected_date, '%Y-%m-%d')
+#             start_of_day = datetime.combine(date_obj.date(), datetime.min.time())
+#             end_of_day = datetime.combine(date_obj.date(), datetime.max.time())
+
+#             logs = Log.query.filter(
+#                 Log.created_at >= start_of_day,
+#                 Log.created_at <= end_of_day,
+#                 Log.organization_id == current_user.organization_id
+#             ).order_by(Log.created_at.desc()).all()
+#         except ValueError:
+#             logs = []
+#     else:
+#         logs = Log.query.filter_by(organization_id=current_user.organization_id)\
+#             .order_by(Log.created_at.desc()).all()
+
+#     return render_template('index.html', logs=logs, selected_date=selected_date)
+
 
 
 
@@ -332,7 +412,6 @@ def delete_user(user_id):
     else:
         db.session.delete(user)
         db.session.commit()
-        flash('✅ Користувача видалено', 'success')
 
     return redirect(url_for('views.users'))
 
@@ -352,7 +431,6 @@ def delete_device(device_id):
     else:
         db.session.delete(device)
         db.session.commit()
-        flash(f'🗑 Пристрій {device.name} видалено', 'success')
 
     return redirect(url_for('views.devices'))
 
@@ -433,39 +511,96 @@ from .utils.bot import send_report, generate_report_text
 from flask import send_file
 import os
 
+
 @views.route('/generate_report', methods=["POST"])
 @login_required
 def generate_report():
     try:
-        logs = Log.query.filter_by(organization_id=current_user.organization_id).all()
+        data = request.get_json()
+        start_date = datetime.strptime(data['start_date'], '%Y-%m-%d')
+        end_date = datetime.strptime(data['end_date'], '%Y-%m-%d') + timedelta(days=1)  
         
-        report_message = generate_report_text(logs)  
+        logs = Log.query.filter(
+            Log.organization_id == current_user.organization_id,
+            Log.created_at >= start_date,
+            Log.created_at <= end_date
+        ).order_by(Log.created_at.desc()).all()
+        
+        if not logs:
+            return jsonify({"success": False, "error": "Не знайдено подій за вказаний період"}), 400
+        
+        report_message = generate_report_text(logs)
         
         report_file_path = os.path.join('tmp', 'report.txt')
-
         os.makedirs('tmp', exist_ok=True)
         
-        with open(report_file_path, 'w') as f:
+        with open(report_file_path, 'w', encoding='utf-8') as f:
             f.write(report_message)
         
         send_report(report_file_path)
         
-        
         os.remove(report_file_path)
 
-        return jsonify({"success": True})
+        return jsonify({
+            "success": True,
+            "message": f"Звіт за період з {data['start_date']} по {data['end_date']} успішно надіслано"
+        })
     
     except Exception as e:
-        print(f" Помилка генерування звіту: {e}")
+        print(f"Помилка генерування звіту: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+# @views.route('/generate_report', methods=["POST"])
+# @login_required
+# def generate_report():
+#     try:
+#         logs = Log.query.filter_by(organization_id=current_user.organization_id).all()
+        
+#         report_message = generate_report_text(logs)  
+        
+#         report_file_path = os.path.join('tmp', 'report.txt')
 
+#         os.makedirs('tmp', exist_ok=True)
+        
+#         with open(report_file_path, 'w') as f:
+#             f.write(report_message)
+        
+#         send_report(report_file_path)
+        
+        
+#         os.remove(report_file_path)
 
+#         return jsonify({"success": True})
+    
+#     except Exception as e:
+#         print(f" Помилка генерування звіту: {e}")
+#         return jsonify({"success": False, "error": str(e)}), 500
+    
+    
+    
+    
+    
+from flask import request, render_template
+from datetime import datetime
 
+@views.route('/logs_by_date')
+@login_required
+def logs_by_date():
+    selected_date = request.args.get('date')
 
+    if not selected_date:
+        selected_date = datetime.today().strftime('%Y-%m-%d')
 
+    logs = Log.query.filter(
+        db.func.date(Log.created_at) == selected_date,
+        Log.organization_id == current_user.organization_id
+    ).all()
 
-
+    return render_template(
+        'index.html',
+        logs=logs,
+        selected_date=selected_date
+    )
 
 
 

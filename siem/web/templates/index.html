@@ -37,8 +37,24 @@
         <button id="generate-report-btn" class="btn-report">Згенерувати звіт</button>
 
 
-        <div id="pinned-attacks">
-            <h2>🔒 Важливі події</h2>
+        
+
+
+ 
+
+
+        <div class="report-period">
+            <h3>Період для звіту:</h3>
+            <form id="report-period-form">
+                <label for="report-start-date">З:</label>
+                <input type="date" id="report-start-date" name="start_date" required>
+                
+                <label for="report-end-date">По:</label>
+                <input type="date" id="report-end-date" name="end_date" required>
+            </form>
+        </div>
+
+
             <table>
                 <thead>
                     <tr>
@@ -58,6 +74,7 @@
 
         <div id="all-logs">
             <h2>📜 Всі події</h2>
+            
             <table>
                 <thead>
                     <tr>
@@ -70,8 +87,27 @@
                     </tr>
                 </thead>
                 <tbody id="logs-body">
-
+                    {% if logs %}
+                        {% for log in logs %}
+                        <tr class="{{ log.severity|lower }}">
+                            <td>{{ log.device_name }}</td>
+                            <td>{{ log.event_type }}</td>
+                            <td>{{ log.severity }}</td>
+                            <td>
+                                <button onclick="openLogDetails({{ log|tojson }})">Деталі</button>
+                            </td>
+                            <td>{{ log.created_at }}</td>                            <td>
+                                <button class="btn-danger" onclick="blockIP('{{ log.ip_address }}')">Заблокувати IP</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6">Подій за цей день не знайдено.</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
+                
             </table>
         </div>
     </main>
@@ -147,38 +183,37 @@
         function updateLogsUI(logs) {
             const logsBody = document.getElementById('logs-body');
             if (!logsBody) return;
-    
+        
             logsBody.innerHTML = '';
-    
+        
             logs.forEach(log => {
                 const row = document.createElement('tr');
                 row.classList.add(log.severity?.toLowerCase());
-    
+        
                 const detailsButton = document.createElement('button');
                 detailsButton.textContent = 'Деталі';
                 detailsButton.addEventListener('click', () => openLogDetails(log));
-    
+        
                 const blockButton = document.createElement('button');
                 blockButton.textContent = 'Заблокувати IP';
                 blockButton.classList.add('btn-danger');
                 blockButton.addEventListener('click', () => blockIP(log.ip_address));
-    
+        
                 row.innerHTML = `
-                    <td>${log.device_name}</td>
+                    <td>${log.device_name || 'Невідомий пристрій'}</td>
                     <td>${log.event_type}</td>
                     <td>${log.severity}</td>
                     <td></td>
                     <td>${new Date(log.created_at).toLocaleString()}</td>
                     <td></td>
                 `;
-    
+        
                 row.children[3].appendChild(detailsButton);
                 row.children[5].appendChild(blockButton);
-    
+        
                 logsBody.appendChild(row);
             });
         }
-    
         function openLogDetails(log) {
             let formattedDetails;
             try {
@@ -188,14 +223,14 @@
             } catch {
                 formattedDetails = log.details;
             }
-    
+        
             const content = `
-    Пристрій: ${log.device_name}
-    Тип події: ${log.event_type}
-    Рівень: ${log.severity}
-    Деталі: ${formattedDetails}
-    
-    Час: ${new Date(log.created_at).toLocaleString()}
+        Пристрій: ${log.device_name || 'Невідомий пристрій'}
+        Тип події: ${log.event_type}
+        Рівень: ${log.severity}
+        Деталі: ${formattedDetails}
+        
+        Час: ${new Date(log.created_at).toLocaleString()}
             `;
             document.getElementById('log-details-content').textContent = content;
             document.getElementById('log-detail-modal').style.display = 'block';
@@ -208,23 +243,23 @@
         function renderPinnedLogs(logs) {
             const pinnedLogsContainer = document.getElementById('pinned-logs');
             if (!pinnedLogsContainer) return;
-    
+        
             pinnedLogsContainer.innerHTML = '';
             const criticalLogs = logs.filter(log => log.severity === 'critical');
-    
+        
             criticalLogs.forEach(log => {
                 const row = document.createElement('tr');
-                row.className = log.severity;
-    
+                row.className = log.severity.toLowerCase();
+        
                 const detailsButton = document.createElement('button');
                 detailsButton.textContent = 'Деталі';
                 detailsButton.addEventListener('click', () => openLogDetails(log));
-    
+        
                 const blockButton = document.createElement('button');
                 blockButton.textContent = 'Заблокувати IP';
                 blockButton.classList.add('btn-danger');
                 blockButton.addEventListener('click', () => blockIP(log.ip_address));
-    
+        
                 row.innerHTML = `
                     <td>${log.device_name || 'Невідомий пристрій'}</td>
                     <td>${log.event_type}</td>
@@ -233,10 +268,10 @@
                     <td>${new Date(log.created_at).toLocaleString()}</td>
                     <td></td>
                 `;
-    
+        
                 row.querySelector('td:nth-child(4)').appendChild(detailsButton);
                 row.querySelector('td:last-child').appendChild(blockButton);
-    
+        
                 pinnedLogsContainer.appendChild(row);
             });
         }
@@ -256,28 +291,44 @@
         fetchBlockedIPs();
         setInterval(fetchLogs, 5000);
     
-        // Report Generation
-        document.getElementById('generate-report-btn')?.addEventListener('click', () => {
-            document.getElementById('loading').style.display = 'block';
+        document.getElementById('generate-report-btn').addEventListener('click', async () => {
+            const loadingElement = document.getElementById('loading');
+            loadingElement.style.display = 'block';
             
-            fetch('/generate_report', {
-                method: 'POST'
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                alert(data.message || 'Звіт надіслано в Telegram!');
-            })
-            .catch(err => {
-                alert('Помилка надсилання звіту.');
-                console.error(err);
-            })
-            .finally(() => {
-                document.getElementById('loading').style.display = 'none';
-            });
+            try {
+                const startDate = document.getElementById('report-start-date').value;
+                const endDate = document.getElementById('report-end-date').value;
+                
+                if (!startDate || !endDate) {
+                    alert('Будь ласка, вкажіть період для звіту');
+                    return;
+                }
+                
+                const response = await fetch('/generate_report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        start_date: startDate,
+                        end_date: endDate
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message || 'Звіт успішно згенеровано та надіслано');
+                } else {
+                    throw new Error(data.error || 'Помилка генерації звіту');
+                }
+            } catch (error) {
+                alert('Помилка: ' + error.message);
+                console.error('Помилка генерації звіту:', error);
+            } finally {
+                loadingElement.style.display = 'none';
+            }
         });
+        
     </script>
     
 

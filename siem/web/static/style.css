@@ -323,6 +323,25 @@ body.device-form a {
     text-decoration: none;
 }
 
+body.device-form select {
+    padding: 1em;
+    font-size: 1em;
+    border: 1px solid #00d78f;
+    border-radius: 8px;
+    margin-bottom: 1.5em;
+    background-color: #000;
+    color: #00d78f;
+    font-family: 'Press Start 2P', 'Fira Code', monospace;
+    appearance: none;
+}
+
+body.device-form select:focus {
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 215, 143, 0.7);
+}
+
+
+
 
 
 
@@ -744,3 +763,63 @@ table tr {
     margin-bottom: 1em;
 }
 
+
+
+
+    /* Стилі для блоку генерації звіту */
+    .report-period {
+        margin: 25px 0;
+        padding: 20px;
+        background-color: #110908;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        border: 1px solid #1b2128;
+        font-family: 'Press Start 2P', 'Fira Code', monospace; 
+
+    }
+    
+    .report-period h3 {
+        color: #00d78f;
+        margin: 0 0 15px 0;
+        font-size: 1.2em;
+        font-family: 'Press Start 2P', 'Fira Code', monospace; 
+        }
+    
+    .report-period-form {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .report-period label {
+        color: #a4a4a4;
+        font-size: 1.1em;
+        margin-right: 5px;
+    }
+    
+    .report-period input[type="date"] {
+        padding: 12px 15px;
+        font-size: 1em;
+        background: #2e091e;
+        color: #a4a4a4;
+        border: 1px solid #1b2128;
+        border-radius: 8px;
+        min-width: 180px;
+    }
+    
+    .btn-report {
+        padding: 12px 25px;
+        font-size: 1.1em;
+        background-color: #040405;
+        color: #4a844b;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-report:hover {
+        background-color: #00b33f;
+        color: rgb(207, 206, 206);
+    }

@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -16,7 +19,22 @@
         <label for="ip_address">IP адреса:</label>
         <input type="text" id="ip_address" name="ip_address" required>
 
-        <button type="submit"> Додати пристрій</button>
+        <label for="mac_address">MAC-адреса:</label>
+        <input type="text" id="mac_address" name="mac_address" required>
+
+        <label for="type">Тип пристрою:</label>
+        <select id="type" name="type" required>
+            <option value="">-- Виберіть тип --</option>
+            <option value="server">Сервер</option>
+            <option value="workstation">Робоча станція</option>
+            <option value="camera">Камера</option>
+            <option value="router">Маршрутизатор</option>
+            <option value="printer">Принтер</option>
+        </select>
+
+
+
+        <button type="submit">Додати пристрій</button>
     </form>
 
     {% with messages = get_flashed_messages(with_categories=true) %}

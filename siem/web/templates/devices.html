@@ -16,6 +16,8 @@
             <tr>
                 <th>Назва</th>
                 <th>IP-адреса</th>
+                <th>MAC-адреса</th>
+                <th>Тип</th>
                 <th>Активний</th>
                 <th>Остання активність</th>
                 <th>Дії</th>
@@ -26,15 +28,15 @@
             <tr>
                 <td>{{ device.name }}</td>
                 <td>{{ device.ip_address }}</td>
+                <td>{{ device.mac_address }}</td>
+                <td>{{ device.type }}</td>
                 <td>{{ 'Так' if device.is_active else 'Ні' }}</td>
                 <td>
-   
-    {% if device.last_seen %}
-        {{ device.last_seen.strftime('%Y-%m-%d %H:%M:%S') }}
-    {% else %}
-        Немає даних
-    {% endif %}
-</td>
+                    {% if device.last_seen %}
+                        {{ device.last_seen.strftime('%Y-%m-%d %H:%M:%S') }}
+                    {% else %}
+                        Немає даних
+                    {% endif %}
                 </td>
                 <td class="actions">
                     <a href="{{ url_for('views.delete_device', device_id=device.id) }}">🗑 Видалити</a>
