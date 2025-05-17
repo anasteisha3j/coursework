@@ -245,7 +245,25 @@
             if (!pinnedLogsContainer) return;
         
             pinnedLogsContainer.innerHTML = '';
-            const criticalLogs = logs.filter(log => log.severity === 'critical');
+        
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // початок поточного дня
+        
+            const criticalLogs = logs.filter(log => {
+                if (log.severity !== 'critical') return false;
+        
+                const logDate = new Date(log.created_at);
+                logDate.setHours(0, 0, 0, 0); // нульова година для порівняння дати
+        
+                return logDate.getTime() === today.getTime();
+            });
+        
+            if (criticalLogs.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="6">Немає критичних подій за сьогодні.</td>`;
+                pinnedLogsContainer.appendChild(row);
+                return;
+            }
         
             criticalLogs.forEach(log => {
                 const row = document.createElement('tr');
@@ -275,6 +293,8 @@
                 pinnedLogsContainer.appendChild(row);
             });
         }
+        
+        
     
         async function fetchLogs() {
             try {
